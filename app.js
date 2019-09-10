@@ -17,9 +17,14 @@ const MODEL_OBJ_URL = "../assets/ArcticFox_Posed.obj";
 const MODEL_MTL_URL = "../assets/ArcticFox_Posed.mtl";
 const GH_OBJ_URL = "../assets/model8/GH_logo_baked.obj";
 const GH_MTL_URL = "../assets/model8/GH_logo_baked.mtl";
-const MODEL_SCALE = 0.001;
+const MODEL_SCALE = 0.005;
 
 var model;
+var animationClip;
+var mixer;
+var clips;
+var animationAction;
+var clock = new THREE.Clock();
 
 /**
  * Container class to manage connecting to the WebXR Device API
@@ -207,16 +212,24 @@ class App {
       model.scale.set(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
     });
 
-    var loader = new THREE.GLTFLoader().setPath("../assets/model7/");
+    var loader = new THREE.GLTFLoader().setPath("../assets/model9/");
     loader.load("gh_logo.gltf", function(gltf) {
-      console.log(gltf.scene.children[0]);
       model = gltf.scene;
-      console.log(model);
+      mixer = new THREE.AnimationMixer(gltf.scene);
+      clips = gltf.animations;
+      // animationClip = THREE.AnimationClip.findByName(
+      //   clips,
+      //   "inner_dot_animation_01"
+      // );
+      // console.log(animationClip);
+      // animationAction = mixer.clipAction(animationClip);
+      // animationAction.play();
+
       var texture = new THREE.TextureLoader().load(
         "../assets/model8/GH_logo_dif.jpg"
       );
       texture.flipY = false;
-      texture.encoding = THREE.linearEncoding;
+      // texture.encoding = THREE.linearEncoding;
       var a_texture = new THREE.TextureLoader().load(
         "../assets/model8/A_GH_logo_dif.jpg"
       );
@@ -265,7 +278,19 @@ class App {
 
     this.frameOfRef = await this.session.requestFrameOfReference("eye-level");
     this.session.requestAnimationFrame(this.onXRFrame);
+    var animationDirectionForwards = true;
+    $("#buttonStart").click(function(e) {
+      e.preventDefault();
+      if (animationDirectionForwards) {
+        window.app.runAnimations(true);
+        animationDirectionForwards = false;
+      } else {
+        window.app.runAnimations(false);
+        animationDirectionForwards = true;
+      }
 
+      return false;
+    });
     window.addEventListener("click", this.onClick);
   }
 
@@ -276,6 +301,11 @@ class App {
   onXRFrame(time, frame) {
     let session = frame.session;
     let pose = frame.getDevicePose(this.frameOfRef);
+
+    if (mixer) {
+      var dt = clock.getDelta();
+      mixer.update(dt);
+    }
 
     // Update the reticle's position
     this.reticle.update(this.frameOfRef);
@@ -393,6 +423,23 @@ class App {
       // Ensure our model has been added to the scene.
       this.scene.add(model);
     }
+  }
+
+  runAnimations(forwards) {
+    console.log("running animations", forwards);
+    clips.forEach(function(clip) {
+      const animation = mixer.clipAction(clip);
+      // animation.reset();
+      animation.paused = false;
+      animation.setLoop(THREE.LoopOnce);
+      animation.clampWhenFinished = true;
+      if (forwards) {
+        animation.timeScale = 1;
+      } else {
+        animation.timeScale = -1;
+      }
+      animation.play();
+    });
   }
 }
 
