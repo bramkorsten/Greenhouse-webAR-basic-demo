@@ -17,7 +17,7 @@ const MODEL_OBJ_URL = "../assets/ArcticFox_Posed.obj";
 const MODEL_MTL_URL = "../assets/ArcticFox_Posed.mtl";
 const GH_OBJ_URL = "../assets/model8/GH_logo_baked.obj";
 const GH_MTL_URL = "../assets/model8/GH_logo_baked.mtl";
-const MODEL_SCALE = 0.01;
+const MODEL_SCALE = 0.001;
 
 var model;
 
@@ -191,8 +191,8 @@ class App {
 
           obj.castShadow = false;
           obj.receiveShadow = false;
-          console.log(obj);
-          console.log("enne");
+          // console.log(obj);
+          // console.log("enne");
         }
         // mesh =>
         //   function() {
@@ -207,13 +207,49 @@ class App {
       model.scale.set(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
     });
 
-    // var loader = new THREE.GLTFLoader().setPath("../assets/model7/");
-    // loader.load("gh_logo.gltf", function(gltf) {
-    //   console.log(gltf.scene.children[0]);
-    //   model = gltf.scene;
-    //   model.children.forEach(mesh => (mesh.castShadow = true));
-    //   model.scale.set(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
-    // });
+    var loader = new THREE.GLTFLoader().setPath("../assets/model7/");
+    loader.load("gh_logo.gltf", function(gltf) {
+      console.log(gltf.scene.children[0]);
+      model = gltf.scene;
+      console.log(model);
+      var texture = new THREE.TextureLoader().load(
+        "../assets/model8/GH_logo_dif.jpg"
+      );
+      texture.flipY = false;
+      texture.encoding = THREE.linearEncoding;
+      var a_texture = new THREE.TextureLoader().load(
+        "../assets/model8/A_GH_logo_dif.jpg"
+      );
+      a_texture.flipY = false;
+      a_texture.encoding = THREE.linearEncoding;
+      var material = new THREE.MeshBasicMaterial({ map: texture });
+      var shadowMaterial = new THREE.MeshBasicMaterial({
+        alphaMap: a_texture,
+        color: new THREE.Color(0x000000),
+        transparent: true
+      });
+      // Some models contain multiple meshes, so we want to make sure
+      // all of our meshes within the model case a shadow.
+      model.children.forEach(function(obj) {
+        if (
+          obj.name == "GH_outer_ring" ||
+          obj.name == "GH_inner_ring" ||
+          obj.name == "GH_inner_dot"
+        ) {
+          obj.material = material;
+        }
+        if (obj.name == "Plane") {
+          obj.material = shadowMaterial;
+        }
+
+        obj.castShadow = false;
+        obj.receiveShadow = false;
+        // console.log(obj);
+        // console.log("enne");
+      });
+      // model.children.forEach(mesh => (mesh.castShadow = true));
+      model.scale.set(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
+    });
 
     // We'll update the camera matrices directly from API, so
     // disable matrix auto updates so three.js doesn't attempt
