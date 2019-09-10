@@ -15,8 +15,9 @@
 
 const MODEL_OBJ_URL = "../assets/ArcticFox_Posed.obj";
 const MODEL_MTL_URL = "../assets/ArcticFox_Posed.mtl";
-const MODEL_GLTF_URL = "../assets/model1/scene.gltf";
-const MODEL_SCALE = 1;
+const GH_OBJ_URL = "../assets/model8/GH_logo_baked.obj";
+const GH_MTL_URL = "../assets/model8/GH_logo_baked.mtl";
+const MODEL_SCALE = 0.01;
 
 var model;
 
@@ -78,6 +79,7 @@ class App {
     // canvas element.
     const outputCanvas = document.createElement("canvas");
     const ctx = outputCanvas.getContext("xrpresent");
+    this.ctxgl2 = outputCanvas.getContext("webgl2");
 
     try {
       // Request a session for the XRDevice with the XRPresentationContext
@@ -121,11 +123,13 @@ class App {
 
     // To help with working with 3D on the web, we'll use three.js. Set up
     // the WebGLRenderer, which handles rendering to our session's base layer.
-    this.renderer = new THREE.WebGLRenderer({
+    this.renderer = new THREE.WebGLRenderer(this.ctxgl2, {
       alpha: true,
       preserveDrawingBuffer: true
     });
     this.renderer.autoClear = false;
+    // this.renderer.gammaOutput = true;
+    // this.renderer.gammaFactor = 2.2;
 
     // We must tell the renderer that it needs to render shadows.
     this.renderer.shadowMap.enabled = true;
@@ -152,32 +156,64 @@ class App {
     // with a few lights and surface to render our shadows. Lights need
     // to be configured in order to use shadows, see `shared/utils.js`
     // for more information.
-    this.scene = DemoUtils.createLitScene();
+    this.scene = DemoUtils.createUnlitScene();
 
     // Use the DemoUtils.loadModel to load our OBJ and MTL. The promise
     // resolves to a THREE.Group containing our mesh information.
     // Dont await this promise, as we want to start the rendering
     // process before this finishes.
     //
-    // DemoUtils.loadModel(MODEL_OBJ_URL, MODEL_MTL_URL).then(model => {
-    //   //JOWJOW
-    //   this.model = model;
-    //   // Some models contain multiple meshes, so we want to make sure
-    //   // all of our meshes within the model case a shadow.
-    //   this.model.children.forEach(mesh => (mesh.castShadow = true));
-    //
-    //   // Every model is different -- you may have to adjust the scale
-    //   // of a model depending on the use.
-    //   this.model.scale.set(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
-    // });
+    DemoUtils.loadModel(GH_OBJ_URL, GH_MTL_URL).then(modelImport => {
+      //JOWJOW
+      model = modelImport;
+      var texture = new THREE.TextureLoader().load(
+        "../assets/model8/GH_logo_dif.jpg"
+      );
+      var a_texture = new THREE.TextureLoader().load(
+        "../assets/model8/A_GH_logo_dif.jpg"
+      );
+      var material = new THREE.MeshBasicMaterial({ map: texture });
+      var shadowMaterial = new THREE.MeshBasicMaterial({
+        alphaMap: a_texture,
+        color: new THREE.Color(0x000000),
+        transparent: true
+      });
+      // Some models contain multiple meshes, so we want to make sure
+      // all of our meshes within the model case a shadow.
+      model.children.forEach(
+        function(obj) {
+          if (obj.name == "GH_solid") {
+            obj.material = material;
+          }
+          if (obj.name == "Plane") {
+            obj.material = shadowMaterial;
+          }
 
-    var loader = new THREE.GLTFLoader().setPath("../assets/model2/");
-    loader.load("greenhouselogo.gltf", function(gltf) {
-      console.log(gltf.scene.children[0]);
-      model = gltf.scene;
-      model.children.forEach(mesh => (mesh.castShadow = true));
+          obj.castShadow = false;
+          obj.receiveShadow = false;
+          console.log(obj);
+          console.log("enne");
+        }
+        // mesh =>
+        //   function() {
+        //     console.log("goan");
+        //     mesh.castShadow = true;
+        //     mesh.material = material;
+        //   }
+      );
+
+      // Every model is different -- you may have to adjust the scale
+      // of a model depending on the use.
       model.scale.set(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
     });
+
+    // var loader = new THREE.GLTFLoader().setPath("../assets/model7/");
+    // loader.load("gh_logo.gltf", function(gltf) {
+    //   console.log(gltf.scene.children[0]);
+    //   model = gltf.scene;
+    //   model.children.forEach(mesh => (mesh.castShadow = true));
+    //   model.scale.set(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
+    // });
 
     // We'll update the camera matrices directly from API, so
     // disable matrix auto updates so three.js doesn't attempt
@@ -315,8 +351,8 @@ class App {
       // a mesh in `DemoUtils.createLitScene()` that receives shadows, so set
       // it's Y position to that of the hit matrix so that shadows appear to be
       // cast on the ground under the model.
-      const shadowMesh = this.scene.children.find(c => c.name === "shadowMesh");
-      shadowMesh.position.y = model.position.y;
+      // const shadowMesh = this.scene.children.find(c => c.name === "shadowMesh");
+      // shadowMesh.position.y = model.position.y;
 
       // Ensure our model has been added to the scene.
       this.scene.add(model);
